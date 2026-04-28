@@ -1,6 +1,6 @@
 {
   "name": "vocabglance",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A desktop vocabulary reminder app that periodically pops up words on screen",
   "main": "out/main/index.js",
   "author": {
