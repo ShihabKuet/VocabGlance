@@ -1,13 +1,13 @@
 {
   "name": "vocabglance",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A desktop vocabulary reminder app that periodically pops up words on screen",
   "main": "out/main/index.js",
   "author": {
-    "name": "Your Name",
-    "email": "your@email.com"
+    "name": "MD. SHANJID AREFIN",
+    "email": "shihabkuetcse@gmail.com"
   },
-  "homepage": "https://github.com/yourusername/vocabglance",
+  "homepage": "https://github.com/ShihabKuet/vocabglance",
   "license": "MIT",
   "private": true,
   "scripts": {
@@ -36,7 +36,12 @@
   "build": {
     "appId": "com.vocabglance.app",
     "productName": "VocabGlance",
-    "copyright": "Copyright © 2025",
+    "publish": {
+      "provider": "github",
+      "owner": "ShihabKuet",
+      "repo": "VocabGlance"
+    },
+    "copyright": "Copyright © 2026",
     "directories": {
       "output": "release"
     },
