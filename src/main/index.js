@@ -166,13 +166,17 @@ function createDashboardWindow() {
 
 // ─── Tray Icon ────────────────────────────────────────────────────────────────
 function createTray() {
-  // Fallback to a 16x16 native image if icon file not present
   let icon
   try {
-    icon = nativeImage.createFromPath(join(__dirname, '../../resources/tray.png'))
+    // In production, resources/ is copied to process.resourcesPath by electron-builder
+    // In dev, it lives relative to the project root
+    const iconPath = app.isPackaged
+      ? join(process.resourcesPath, 'tray.png')
+      : join(__dirname, '../../resources/tray.png')
+
+    icon = nativeImage.createFromPath(iconPath)
     if (icon.isEmpty()) throw new Error('empty')
   } catch {
-    // Create a simple 16x16 placeholder tray icon programmatically
     icon = nativeImage.createEmpty()
   }
 

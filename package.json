@@ -36,6 +36,12 @@
   "build": {
     "appId": "com.vocabglance.app",
     "productName": "VocabGlance",
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "."
+      }
+    ],
     "publish": {
       "provider": "github",
       "owner": "ShihabKuet",
