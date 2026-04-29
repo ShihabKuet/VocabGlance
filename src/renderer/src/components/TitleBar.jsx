@@ -1,31 +1,29 @@
 /**
  * TitleBar — Custom draggable title bar for the frameless dashboard window.
- * Provides minimize / maximize / close controls that call main via IPC.
  */
 
-import { colors } from '../styles/tokens'
-
-const { bg, border, textMuted } = colors
+import { useTheme } from '../context/ThemeContext'
 
 export default function TitleBar() {
+  const { colors } = useTheme()
+
   return (
     <div style={{
       height: 36,
-      background: bg,
-      borderBottom: `1px solid ${border}`,
+      background: colors.bg,
+      borderBottom: `1px solid ${colors.border}`,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'flex-end',
       padding: '0 12px',
       flexShrink: 0,
-      // Makes the entire bar draggable (Electron specific)
       WebkitAppRegion: 'drag',
+      transition: 'background 0.25s ease, border-color 0.25s ease',
     }}>
-      {/* Window controls – must be no-drag so clicks register */}
       <div style={{ display: 'flex', gap: 6, WebkitAppRegion: 'no-drag' }}>
         <WinBtn color="#FFB93E" hoverColor="#FFA500" onClick={() => window.api.minimizeWindow()} title="Minimize" />
         <WinBtn color="#3FD265" hoverColor="#28A745" onClick={() => window.api.maximizeWindow()} title="Maximize" />
-        <WinBtn color="#FF6058" hoverColor="#E0443C" onClick={() => window.api.closeWindow()}    title="Close" />
+        <WinBtn color="#FF6058" hoverColor="#E0443C" onClick={() => window.api.closeWindow()}    title="Close"    />
       </div>
     </div>
   )

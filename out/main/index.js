@@ -14,14 +14,14 @@ const store = new Store({
   name: "vocabglance-data",
   defaults: {
     words: [
-      { id: 1, word: "Ephemeral", definition: "Lasting for a very short time; quickly fading.", source: "Daily Star", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 2, word: "Eloquent", definition: "Fluent and powerfully persuasive in speech or writing.", source: "Daily Star", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 3, word: "Ubiquitous", definition: "Present, appearing, or found everywhere simultaneously.", source: "", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 4, word: "Serendipity", definition: "The faculty of making fortunate discoveries by accident.", source: "Daily Star", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 5, word: "Perfidious", definition: "Deceitful and untrustworthy; guilty of betrayal.", source: "Daily Star", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 6, word: "Laconic", definition: "Using very few words; brief and concise in speech.", source: "", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 7, word: "Pernicious", definition: "Having a harmful effect in a gradual or subtle way.", source: "Daily Star", date: "Apr 27", mastered: false, seen: 0 },
-      { id: 8, word: "Melancholy", definition: "A deep, reflective sadness — pensive and lingering.", source: "", date: "Apr 27", mastered: false, seen: 0 }
+      { id: 1, word: "Ephemeral", definition: "Lasting for a very short time; quickly fading.", pronunciation: "ih-FEM-er-ul", synonyms: "transient, fleeting, momentary", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 2, word: "Eloquent", definition: "Fluent and powerfully persuasive in speech or writing.", pronunciation: "EL-oh-kwent", synonyms: "articulate, expressive, fluent", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 3, word: "Ubiquitous", definition: "Present, appearing, or found everywhere simultaneously.", pronunciation: "yoo-BIK-wih-tus", synonyms: "omnipresent, pervasive, universal", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 4, word: "Serendipity", definition: "The faculty of making fortunate discoveries by accident.", pronunciation: "ser-en-DIP-ih-tee", synonyms: "chance, luck, fortuity", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 5, word: "Perfidious", definition: "Deceitful and untrustworthy; guilty of betrayal.", pronunciation: "per-FID-ee-us", synonyms: "treacherous, disloyal, deceitful", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 6, word: "Laconic", definition: "Using very few words; brief and concise in speech.", pronunciation: "luh-KON-ik", synonyms: "terse, succinct, brief", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 7, word: "Pernicious", definition: "Having a harmful effect in a gradual or subtle way.", pronunciation: "per-NISH-us", synonyms: "harmful, destructive, detrimental", date: "Apr 27", mastered: false, seen: 0 },
+      { id: 8, word: "Melancholy", definition: "A deep, reflective sadness — pensive and lingering.", pronunciation: "MEL-un-kol-ee", synonyms: "sadness, gloom, despondency", date: "Apr 27", mastered: false, seen: 0 }
     ],
     settings: {
       intervalMs: 3e5,
@@ -30,7 +30,9 @@ const store = new Store({
       // 'bottom-right' | 'bottom-left'
       enabled: true,
       startWithWindows: false,
-      popupDurationMs: 8e3
+      popupDurationMs: 8e3,
+      themeMode: "system"
+      // 'dark' | 'light' | 'system'
     }
   }
 });
@@ -73,7 +75,6 @@ function createPopupWindow() {
     skipTaskbar: true,
     resizable: false,
     focusable: false,
-    // never steals keyboard focus
     hasShadow: false,
     webPreferences: {
       preload: path.join(__dirname, "../preload/index.js"),
@@ -105,7 +106,6 @@ function createDashboardWindow() {
     minHeight: 520,
     title: "VocabGlance",
     frame: false,
-    // custom title bar
     transparent: false,
     backgroundColor: "#0D0F14",
     show: false,
@@ -136,7 +136,8 @@ function createDashboardWindow() {
 function createTray() {
   let icon;
   try {
-    icon = electron.nativeImage.createFromPath(path.join(__dirname, "../../resources/tray.png"));
+    const iconPath = electron.app.isPackaged ? path.join(process.resourcesPath, "tray.png") : path.join(__dirname, "../../resources/tray.png");
+    icon = electron.nativeImage.createFromPath(iconPath);
     if (icon.isEmpty()) throw new Error("empty");
   } catch {
     icon = electron.nativeImage.createEmpty();
@@ -149,10 +150,7 @@ function createTray() {
 function buildTrayMenu() {
   const settings = store.get("settings");
   const menu = electron.Menu.buildFromTemplate([
-    {
-      label: "VocabGlance",
-      enabled: false
-    },
+    { label: "VocabGlance", enabled: false },
     { type: "separator" },
     {
       label: settings.enabled ? "⏸  Pause Reminders" : "▶  Resume Reminders",
@@ -165,23 +163,14 @@ function buildTrayMenu() {
         dashboardWin?.webContents.send("settings-changed", store.get("settings"));
       }
     },
-    {
-      label: "👁  Preview Word Now",
-      click: () => triggerPopup()
-    },
+    { label: "👁  Preview Word Now", click: () => triggerPopup() },
     { type: "separator" },
-    {
-      label: "📚  Open Dashboard",
-      click: () => createDashboardWindow()
-    },
+    { label: "📚  Open Dashboard", click: () => createDashboardWindow() },
     { type: "separator" },
-    {
-      label: "Quit VocabGlance",
-      click: () => {
-        electron.app.isQuiting = true;
-        electron.app.quit();
-      }
-    }
+    { label: "Quit VocabGlance", click: () => {
+      electron.app.isQuiting = true;
+      electron.app.quit();
+    } }
   ]);
   tray.setContextMenu(menu);
 }
@@ -189,9 +178,7 @@ function startScheduler() {
   stopScheduler();
   const settings = store.get("settings");
   if (!settings.enabled) return;
-  scheduleTimer = setInterval(() => {
-    triggerPopup();
-  }, settings.intervalMs);
+  scheduleTimer = setInterval(() => triggerPopup(), settings.intervalMs);
 }
 function stopScheduler() {
   if (scheduleTimer) {
@@ -211,9 +198,7 @@ function triggerPopup() {
   store.set("words", updated);
   if (!popupWin || popupWin.isDestroyed()) {
     createPopupWindow();
-    popupWin.webContents.once("did-finish-load", () => {
-      sendWordToPopup(word);
-    });
+    popupWin.webContents.once("did-finish-load", () => sendWordToPopup(word));
   } else {
     sendWordToPopup(word);
   }
@@ -222,11 +207,14 @@ function triggerPopup() {
 function sendWordToPopup(word) {
   if (!popupWin || popupWin.isDestroyed()) return;
   const settings = store.get("settings");
+  const themeMode = settings.themeMode || "system";
+  const isDark = themeMode === "system" ? electron.nativeTheme.shouldUseDarkColors : themeMode === "dark";
   popupWin.webContents.send("show-word", {
     word,
     duration: settings.popupDurationMs,
     position: settings.position,
-    queueLength: shuffleQueue.length
+    queueLength: shuffleQueue.length,
+    isDark
   });
 }
 electron.ipcMain.handle("get-words", () => store.get("words"));
@@ -273,6 +261,7 @@ electron.ipcMain.handle("resize-popup", (_e, height) => {
   }
   return true;
 });
+electron.ipcMain.handle("get-system-theme", () => electron.nativeTheme.shouldUseDarkColors);
 electron.ipcMain.on("window-minimize", () => dashboardWin?.minimize());
 electron.ipcMain.on("window-maximize", () => dashboardWin?.isMaximized() ? dashboardWin.unmaximize() : dashboardWin.maximize());
 electron.ipcMain.on("window-close", () => dashboardWin?.close());
@@ -280,6 +269,9 @@ electron.app.whenReady().then(() => {
   buildQueue();
   createTray();
   createDashboardWindow();
+  electron.nativeTheme.on("updated", () => {
+    dashboardWin?.webContents.send("system-theme-changed", electron.nativeTheme.shouldUseDarkColors);
+  });
   setTimeout(() => {
     startScheduler();
     setTimeout(() => triggerPopup(), 1e4);

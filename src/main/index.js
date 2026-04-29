@@ -7,6 +7,7 @@
  *  • Word scheduler – fires popup at user-defined intervals
  *  • IPC handlers for all renderer ↔ main communication
  *  • Persistent storage via electron-store
+ *  • System theme detection via nativeTheme
  * ─────────────────────────────────────────────────────────────────────────────
  */
 
@@ -17,6 +18,7 @@ import {
   Tray,
   Menu,
   nativeImage,
+  nativeTheme,
   screen,
   shell
 } from 'electron'
@@ -29,33 +31,34 @@ const store = new Store({
   name: 'vocabglance-data',
   defaults: {
     words: [
-      { id: 1,  word: 'Ephemeral',   definition: 'Lasting for a very short time; quickly fading.', source: 'Daily Star', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 2,  word: 'Eloquent',    definition: 'Fluent and powerfully persuasive in speech or writing.', source: 'Daily Star', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 3,  word: 'Ubiquitous',  definition: 'Present, appearing, or found everywhere simultaneously.', source: '', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 4,  word: 'Serendipity', definition: 'The faculty of making fortunate discoveries by accident.', source: 'Daily Star', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 5,  word: 'Perfidious',  definition: 'Deceitful and untrustworthy; guilty of betrayal.', source: 'Daily Star', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 6,  word: 'Laconic',     definition: 'Using very few words; brief and concise in speech.', source: '', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 7,  word: 'Pernicious',  definition: 'Having a harmful effect in a gradual or subtle way.', source: 'Daily Star', date: 'Apr 27', mastered: false, seen: 0 },
-      { id: 8,  word: 'Melancholy',  definition: 'A deep, reflective sadness — pensive and lingering.', source: '', date: 'Apr 27', mastered: false, seen: 0 }
+      { id: 1, word: 'Ephemeral',   definition: 'Lasting for a very short time; quickly fading.',          pronunciation: 'ih-FEM-er-ul',   synonyms: 'transient, fleeting, momentary',  date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 2, word: 'Eloquent',    definition: 'Fluent and powerfully persuasive in speech or writing.',   pronunciation: 'EL-oh-kwent',    synonyms: 'articulate, expressive, fluent',  date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 3, word: 'Ubiquitous',  definition: 'Present, appearing, or found everywhere simultaneously.',  pronunciation: 'yoo-BIK-wih-tus', synonyms: 'omnipresent, pervasive, universal', date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 4, word: 'Serendipity', definition: 'The faculty of making fortunate discoveries by accident.', pronunciation: 'ser-en-DIP-ih-tee', synonyms: 'chance, luck, fortuity',          date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 5, word: 'Perfidious',  definition: 'Deceitful and untrustworthy; guilty of betrayal.',         pronunciation: 'per-FID-ee-us',  synonyms: 'treacherous, disloyal, deceitful', date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 6, word: 'Laconic',     definition: 'Using very few words; brief and concise in speech.',       pronunciation: 'luh-KON-ik',     synonyms: 'terse, succinct, brief',          date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 7, word: 'Pernicious',  definition: 'Having a harmful effect in a gradual or subtle way.',      pronunciation: 'per-NISH-us',    synonyms: 'harmful, destructive, detrimental', date: 'Apr 27', mastered: false, seen: 0 },
+      { id: 8, word: 'Melancholy',  definition: 'A deep, reflective sadness — pensive and lingering.',      pronunciation: 'MEL-un-kol-ee',  synonyms: 'sadness, gloom, despondency',     date: 'Apr 27', mastered: false, seen: 0 }
     ],
     settings: {
-      intervalMs: 300000,   // 5 minutes default
-      position: 'bottom-right', // 'bottom-right' | 'bottom-left'
-      enabled: true,
-      startWithWindows: false,
-      popupDurationMs: 8000
+      intervalMs:      300000,        // 5 minutes default
+      position:        'bottom-right',// 'bottom-right' | 'bottom-left'
+      enabled:         true,
+      startWithWindows:false,
+      popupDurationMs: 8000,
+      themeMode:       'system',      // 'dark' | 'light' | 'system'
     }
   }
 })
 
 // ─── State ────────────────────────────────────────────────────────────────────
-let dashboardWin = null
-let popupWin     = null
-let tray         = null
+let dashboardWin  = null
+let popupWin      = null
+let tray          = null
 let scheduleTimer = null
 let shuffleQueue  = []
 
-// ─── Shuffle utility ─────────────────────────────────────────────────────────
+// ─── Shuffle utility ──────────────────────────────────────────────────────────
 function shuffleArray(arr) {
   const a = [...arr]
   for (let i = a.length - 1; i > 0; i--) {
@@ -65,10 +68,6 @@ function shuffleArray(arr) {
   return a
 }
 
-/**
- * Build a weighted shuffle queue.
- * Mastered words appear with ~20% frequency compared to learning words.
- */
 function buildQueue() {
   const words    = store.get('words')
   const active   = words.filter(w => !w.mastered)
@@ -81,25 +80,21 @@ function buildQueue() {
 function createPopupWindow() {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
   const settings = store.get('settings')
-  const W = 360, H = 180          // initial size, grows with content
+  const W = 360, H = 180
 
-  const x = settings.position === 'bottom-left'
-    ? 24
-    : width - W - 24
-  const y = height                 // start off-screen below (slide-up animation)
+  const x = settings.position === 'bottom-left' ? 24 : width - W - 24
+  const y = height  // start off-screen below
 
   popupWin = new BrowserWindow({
     x, y,
-    width: W,
-    height: H,
-    minWidth: W,
-    minHeight: H,
+    width: W, height: H,
+    minWidth: W, minHeight: H,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,
-    focusable: false,              // never steals keyboard focus
+    focusable: false,
     hasShadow: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -109,7 +104,6 @@ function createPopupWindow() {
     }
   })
 
-  // Keep on top of everything (works on Windows 10/11)
   popupWin.setAlwaysOnTop(true, 'screen-saver')
   popupWin.setVisibleOnAllWorkspaces(true)
 
@@ -127,12 +121,10 @@ function createDashboardWindow() {
   if (dashboardWin) { dashboardWin.focus(); return }
 
   dashboardWin = new BrowserWindow({
-    width: 920,
-    height: 680,
-    minWidth: 700,
-    minHeight: 520,
+    width: 920, height: 680,
+    minWidth: 700, minHeight: 520,
     title: 'VocabGlance',
-    frame: false,                  // custom title bar
+    frame: false,
     transparent: false,
     backgroundColor: '#0D0F14',
     show: false,
@@ -157,7 +149,6 @@ function createDashboardWindow() {
 
   dashboardWin.on('closed', () => { dashboardWin = null })
 
-  // Handle external links
   dashboardWin.webContents.setWindowOpenHandler(({ url }) => {
     shell.openExternal(url)
     return { action: 'deny' }
@@ -168,12 +159,9 @@ function createDashboardWindow() {
 function createTray() {
   let icon
   try {
-    // In production, resources/ is copied to process.resourcesPath by electron-builder
-    // In dev, it lives relative to the project root
     const iconPath = app.isPackaged
       ? join(process.resourcesPath, 'tray.png')
       : join(__dirname, '../../resources/tray.png')
-
     icon = nativeImage.createFromPath(iconPath)
     if (icon.isEmpty()) throw new Error('empty')
   } catch {
@@ -183,17 +171,13 @@ function createTray() {
   tray = new Tray(icon)
   tray.setToolTip('VocabGlance – Running')
   buildTrayMenu()
-
   tray.on('double-click', () => createDashboardWindow())
 }
 
 function buildTrayMenu() {
   const settings = store.get('settings')
   const menu = Menu.buildFromTemplate([
-    {
-      label: 'VocabGlance',
-      enabled: false
-    },
+    { label: 'VocabGlance', enabled: false },
     { type: 'separator' },
     {
       label: settings.enabled ? '⏸  Pause Reminders' : '▶  Resume Reminders',
@@ -203,24 +187,14 @@ function buildTrayMenu() {
         store.set('settings', s)
         s.enabled ? startScheduler() : stopScheduler()
         buildTrayMenu()
-        // Notify dashboard if open
         dashboardWin?.webContents.send('settings-changed', store.get('settings'))
       }
     },
-    {
-      label: '👁  Preview Word Now',
-      click: () => triggerPopup()
-    },
+    { label: '👁  Preview Word Now', click: () => triggerPopup() },
     { type: 'separator' },
-    {
-      label: '📚  Open Dashboard',
-      click: () => createDashboardWindow()
-    },
+    { label: '📚  Open Dashboard',   click: () => createDashboardWindow() },
     { type: 'separator' },
-    {
-      label: 'Quit VocabGlance',
-      click: () => { app.isQuiting = true; app.quit() }
-    }
+    { label: 'Quit VocabGlance', click: () => { app.isQuiting = true; app.quit() } }
   ])
   tray.setContextMenu(menu)
 }
@@ -230,91 +204,72 @@ function startScheduler() {
   stopScheduler()
   const settings = store.get('settings')
   if (!settings.enabled) return
-
-  scheduleTimer = setInterval(() => {
-    triggerPopup()
-  }, settings.intervalMs)
+  scheduleTimer = setInterval(() => triggerPopup(), settings.intervalMs)
 }
 
 function stopScheduler() {
   if (scheduleTimer) { clearInterval(scheduleTimer); scheduleTimer = null }
 }
 
-/**
- * triggerPopup – pick next word from queue, show the popup window,
- * send the word data via IPC, then auto-close after duration.
- */
 function triggerPopup() {
   const words = store.get('words')
   if (words.length === 0) return
 
-  // Rebuild queue when exhausted
   if (shuffleQueue.length === 0) buildQueue()
   const word = shuffleQueue.shift()
   if (!word) return
 
-  // Update seen count in store
   const updated = words.map(w =>
     w.id === word.id ? { ...w, seen: (w.seen || 0) + 1 } : w
   )
   store.set('words', updated)
 
-  // Create popup window if not already open
   if (!popupWin || popupWin.isDestroyed()) {
     createPopupWindow()
-    // Wait for window to load then send word
-    popupWin.webContents.once('did-finish-load', () => {
-      sendWordToPopup(word)
-    })
+    popupWin.webContents.once('did-finish-load', () => sendWordToPopup(word))
   } else {
     sendWordToPopup(word)
   }
 
-  // Notify dashboard to refresh word list (seen count updated)
   dashboardWin?.webContents.send('words-updated', store.get('words'))
 }
 
 function sendWordToPopup(word) {
   if (!popupWin || popupWin.isDestroyed()) return
   const settings = store.get('settings')
+
+  // Resolve the active theme to send to popup
+  const themeMode = settings.themeMode || 'system'
+  const isDark = themeMode === 'system'
+    ? nativeTheme.shouldUseDarkColors
+    : themeMode === 'dark'
+
   popupWin.webContents.send('show-word', {
     word,
-    duration: settings.popupDurationMs,
-    position: settings.position,
-    queueLength: shuffleQueue.length
+    duration:    settings.popupDurationMs,
+    position:    settings.position,
+    queueLength: shuffleQueue.length,
+    isDark,
   })
 }
 
 // ─── IPC Handlers ─────────────────────────────────────────────────────────────
 
-/** Dashboard: get all words */
-ipcMain.handle('get-words', () => store.get('words'))
-
-/** Dashboard: save full words array */
-ipcMain.handle('save-words', (_e, words) => {
-  store.set('words', words)
-  shuffleQueue = []               // reset queue on any change
-  return true
-})
-
-/** Dashboard: get settings */
+ipcMain.handle('get-words',    () => store.get('words'))
+ipcMain.handle('save-words',   (_e, words) => { store.set('words', words); shuffleQueue = []; return true })
 ipcMain.handle('get-settings', () => store.get('settings'))
 
-/** Dashboard: save settings */
 ipcMain.handle('save-settings', (_e, settings) => {
   store.set('settings', settings)
   app.setLoginItemSettings({ openAtLogin: settings.startWithWindows })
-  // Restart scheduler with new interval
   if (settings.enabled) startScheduler()
   else stopScheduler()
   buildTrayMenu()
   return true
 })
 
-/** Dashboard: trigger a preview popup immediately */
 ipcMain.handle('preview-popup', () => { triggerPopup(); return true })
 
-/** Popup: user clicked "Got it" – mark word as mastered */
 ipcMain.handle('mark-mastered', (_e, wordId) => {
   const words = store.get('words').map(w =>
     w.id === wordId ? { ...w, mastered: true } : w
@@ -325,17 +280,14 @@ ipcMain.handle('mark-mastered', (_e, wordId) => {
   return true
 })
 
-/** Popup: user dismissed – close popup window */
 ipcMain.handle('close-popup', () => {
   if (popupWin && !popupWin.isDestroyed()) popupWin.close()
   return true
 })
 
-/** Popup: resize window to fit content */
 ipcMain.handle('resize-popup', (_e, height) => {
   if (popupWin && !popupWin.isDestroyed()) {
     popupWin.setSize(360, Math.min(Math.max(height, 140), 320))
-    // Re-position after resize so it stays in corner
     const { width, height: screenH } = screen.getPrimaryDisplay().workAreaSize
     const settings = store.get('settings')
     const [w] = popupWin.getSize()
@@ -346,28 +298,30 @@ ipcMain.handle('resize-popup', (_e, height) => {
   return true
 })
 
-/** Dashboard: window controls (custom title bar) */
-ipcMain.on('window-minimize',  () => dashboardWin?.minimize())
-ipcMain.on('window-maximize',  () => dashboardWin?.isMaximized() ? dashboardWin.unmaximize() : dashboardWin.maximize())
-ipcMain.on('window-close',     () => dashboardWin?.close())
+/** Get current OS dark mode state */
+ipcMain.handle('get-system-theme', () => nativeTheme.shouldUseDarkColors)
+
+ipcMain.on('window-minimize', () => dashboardWin?.minimize())
+ipcMain.on('window-maximize', () => dashboardWin?.isMaximized() ? dashboardWin.unmaximize() : dashboardWin.maximize())
+ipcMain.on('window-close',    () => dashboardWin?.close())
 
 // ─── App Lifecycle ────────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   buildQueue()
   createTray()
-
-  // Show dashboard on first launch
   createDashboardWindow()
 
-  // Start word scheduler after a short delay
+  // Broadcast OS theme changes to dashboard renderer in real time
+  nativeTheme.on('updated', () => {
+    dashboardWin?.webContents.send('system-theme-changed', nativeTheme.shouldUseDarkColors)
+  })
+
   setTimeout(() => {
     startScheduler()
-    // First popup after 10 seconds so the user sees it on first run
     setTimeout(() => triggerPopup(), 10000)
   }, 3000)
 })
 
-// Prevent quitting when dashboard is closed — stay in tray
 app.on('window-all-closed', (e) => {
   if (!app.isQuiting) e.preventDefault()
 })
