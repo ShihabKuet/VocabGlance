@@ -9,6 +9,7 @@ import TitleBar    from './TitleBar'
 import BucketTab   from './BucketTab'
 import SettingsTab from './SettingsTab'
 import { fonts }   from '../styles/tokens'
+import logo from '../../public/logo.png'
 
 export default function App() {
   return (
@@ -61,7 +62,7 @@ function AppShell() {
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <img
-            src="/logo.png"
+            src={logo}
             alt="VocabGlance"
             style={{
               width: 30, height: 30,
