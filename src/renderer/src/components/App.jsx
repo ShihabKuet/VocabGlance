@@ -24,10 +24,12 @@ function AppShell() {
   const [wordCount, setWordCount] = useState(0)
   const [enabled,   setEnabled]   = useState(true)
   const [notif,     setNotif]     = useState('')
+  const [version, setVersion] = useState('')
 
   useEffect(() => {
     window.api.getSettings().then(s => setEnabled(s.enabled))
     window.api.onSettingsChanged(s => setEnabled(s.enabled))
+    window.api.getAppVersion().then(v => setVersion(v))
     return () => window.api.removeListeners('settings-changed')
   }, [])
 
@@ -58,7 +60,15 @@ function AppShell() {
       }}>
         {/* Logo */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <LogoMark />
+          <img
+            src="/logo.png"
+            alt="VocabGlance"
+            style={{
+              width: 30, height: 30,
+              borderRadius: 8,
+              objectFit: 'contain',
+            }}
+          />
           <span style={{ fontFamily: fonts.serif, fontSize: 18, fontWeight: 700, letterSpacing: '-0.2px' }}>
             VocabGlance
           </span>
@@ -67,7 +77,7 @@ function AppShell() {
             background: colors.surface2, border: `1px solid ${colors.border}`,
             borderRadius: 5, padding: '1px 7px',
             transition: 'background 0.25s ease',
-          }}>v1.0</span>
+          }}>v{version}</span>
         </div>
 
         {/* Tabs */}

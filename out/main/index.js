@@ -114,7 +114,8 @@ function createDashboardWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
-    }
+    },
+    icon: electron.app.isPackaged ? path.join(process.resourcesPath, "icon.ico") : path.join(__dirname, "../../resources/icon.ico")
   });
   dashboardWin.once("ready-to-show", () => {
     dashboardWin.show();
@@ -224,6 +225,7 @@ electron.ipcMain.handle("save-words", (_e, words) => {
   return true;
 });
 electron.ipcMain.handle("get-settings", () => store.get("settings"));
+electron.ipcMain.handle("get-app-version", () => electron.app.getVersion());
 electron.ipcMain.handle("save-settings", (_e, settings) => {
   store.set("settings", settings);
   electron.app.setLoginItemSettings({ openAtLogin: settings.startWithWindows });

@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('api', {
   saveWords:    (words) => ipcRenderer.invoke('save-words', words),
   markMastered: (id)    => ipcRenderer.invoke('mark-mastered', id),
 
+  // ── App Info ───────────────────────────────────────────────────────────────
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+
   // ── Settings ───────────────────────────────────────────────────────────────
   getSettings:  ()         => ipcRenderer.invoke('get-settings'),
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),

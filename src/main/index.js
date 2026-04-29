@@ -133,7 +133,10 @@ function createDashboardWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
-    }
+    },
+    icon: app.isPackaged
+      ? join(process.resourcesPath, 'icon.ico')
+      : join(__dirname, '../../resources/icon.ico'),
   })
 
   dashboardWin.once('ready-to-show', () => {
@@ -258,6 +261,7 @@ function sendWordToPopup(word) {
 ipcMain.handle('get-words',    () => store.get('words'))
 ipcMain.handle('save-words',   (_e, words) => { store.set('words', words); shuffleQueue = []; return true })
 ipcMain.handle('get-settings', () => store.get('settings'))
+ipcMain.handle('get-app-version', () => app.getVersion())
 
 ipcMain.handle('save-settings', (_e, settings) => {
   store.set('settings', settings)

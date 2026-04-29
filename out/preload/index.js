@@ -5,6 +5,8 @@ electron.contextBridge.exposeInMainWorld("api", {
   getWords: () => electron.ipcRenderer.invoke("get-words"),
   saveWords: (words) => electron.ipcRenderer.invoke("save-words", words),
   markMastered: (id) => electron.ipcRenderer.invoke("mark-mastered", id),
+  // ── App Info ───────────────────────────────────────────────────────────────
+  getAppVersion: () => electron.ipcRenderer.invoke("get-app-version"),
   // ── Settings ───────────────────────────────────────────────────────────────
   getSettings: () => electron.ipcRenderer.invoke("get-settings"),
   saveSettings: (settings) => electron.ipcRenderer.invoke("save-settings", settings),
