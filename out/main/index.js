@@ -31,8 +31,10 @@ const store = new Store({
       enabled: true,
       startWithWindows: false,
       popupDurationMs: 8e3,
-      themeMode: "system"
+      themeMode: "system",
       // 'dark' | 'light' | 'system'
+      shuffleMode: "random"
+      // 'random' | 'order' | 'reverse'
     }
   }
 });
@@ -51,10 +53,19 @@ function shuffleArray(arr) {
 }
 function buildQueue() {
   const words = store.get("words");
+  const settings = store.get("settings");
+  const mode = settings.shuffleMode || "random";
   const active = words.filter((w) => !w.mastered);
   const mastered = words.filter((w) => w.mastered);
   const mSlots = Math.max(0, Math.round(mastered.length * 0.2));
-  shuffleQueue = shuffleArray([...active, ...shuffleArray(mastered).slice(0, mSlots)]);
+  const masteredSet = shuffleArray(mastered).slice(0, mSlots);
+  if (mode === "order") {
+    shuffleQueue = [...[...active].reverse(), ...masteredSet];
+  } else if (mode === "reverse") {
+    shuffleQueue = [...active, ...masteredSet];
+  } else {
+    shuffleQueue = shuffleArray([...active, ...masteredSet]);
+  }
 }
 function createPopupWindow() {
   const { width, height } = electron.screen.getPrimaryDisplay().workAreaSize;
@@ -225,13 +236,13 @@ electron.ipcMain.handle("save-words", (_e, words) => {
   return true;
 });
 electron.ipcMain.handle("get-settings", () => store.get("settings"));
-electron.ipcMain.handle("get-app-version", () => electron.app.getVersion());
 electron.ipcMain.handle("save-settings", (_e, settings) => {
   store.set("settings", settings);
   electron.app.setLoginItemSettings({ openAtLogin: settings.startWithWindows });
   if (settings.enabled) startScheduler();
   else stopScheduler();
   buildTrayMenu();
+  shuffleQueue = [];
   return true;
 });
 electron.ipcMain.handle("preview-popup", () => {

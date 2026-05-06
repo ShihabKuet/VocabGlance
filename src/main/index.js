@@ -147,7 +147,10 @@ function createDashboardWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
-    }
+    },
+    icon: app.isPackaged
+      ? join(process.resourcesPath, 'icon.ico')
+      : join(__dirname, '../../resources/icon.ico'),
   })
 
   dashboardWin.once('ready-to-show', () => {
