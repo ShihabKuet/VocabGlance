@@ -47,6 +47,7 @@ const store = new Store({
       startWithWindows:false,
       popupDurationMs: 8000,
       themeMode:       'system',      // 'dark' | 'light' | 'system'
+      shuffleMode:     'random',      // 'random' | 'order' | 'reverse'
     }
   }
 })
@@ -69,11 +70,24 @@ function shuffleArray(arr) {
 }
 
 function buildQueue() {
-  const words    = store.get('words')
-  const active   = words.filter(w => !w.mastered)
-  const mastered = words.filter(w => w.mastered)
-  const mSlots   = Math.max(0, Math.round(mastered.length * 0.2))
-  shuffleQueue   = shuffleArray([...active, ...shuffleArray(mastered).slice(0, mSlots)])
+  const words       = store.get('words')
+  const settings    = store.get('settings')
+  const mode        = settings.shuffleMode || 'random'
+  const active      = words.filter(w => !w.mastered)
+  const mastered    = words.filter(w => w.mastered)
+  const mSlots      = Math.max(0, Math.round(mastered.length * 0.2))
+  const masteredSet = shuffleArray(mastered).slice(0, mSlots)
+
+  if (mode === 'order') {
+    // Insertion order — oldest first (array is stored newest-first, so reverse)
+    shuffleQueue = [...[...active].reverse(), ...masteredSet]
+  } else if (mode === 'reverse') {
+    // Reverse order — newest first (natural array order)
+    shuffleQueue = [...active, ...masteredSet]
+  } else {
+    // Random — default shuffle behavior
+    shuffleQueue = shuffleArray([...active, ...masteredSet])
+  }
 }
 
 // ─── Popup Window ─────────────────────────────────────────────────────────────
@@ -133,10 +147,7 @@ function createDashboardWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false
-    },
-    icon: app.isPackaged
-      ? join(process.resourcesPath, 'icon.ico')
-      : join(__dirname, '../../resources/icon.ico'),
+    }
   })
 
   dashboardWin.once('ready-to-show', () => {
@@ -261,7 +272,6 @@ function sendWordToPopup(word) {
 ipcMain.handle('get-words',    () => store.get('words'))
 ipcMain.handle('save-words',   (_e, words) => { store.set('words', words); shuffleQueue = []; return true })
 ipcMain.handle('get-settings', () => store.get('settings'))
-ipcMain.handle('get-app-version', () => app.getVersion())
 
 ipcMain.handle('save-settings', (_e, settings) => {
   store.set('settings', settings)
@@ -269,6 +279,8 @@ ipcMain.handle('save-settings', (_e, settings) => {
   if (settings.enabled) startScheduler()
   else stopScheduler()
   buildTrayMenu()
+  // Rebuild queue so new order takes effect immediately
+  shuffleQueue = []
   return true
 })
 

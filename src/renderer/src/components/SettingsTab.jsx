@@ -9,7 +9,9 @@ import { fonts, radii } from '../styles/tokens'
 const INTERVALS = [
   { label: '30 sec', value: 30000   },
   { label: '1 min',  value: 60000   },
+  { label: '2 min',  value: 120000  },
   { label: '5 min',  value: 300000  },
+  { label: '10 min', value: 600000  },
   { label: '15 min', value: 900000  },
   { label: '30 min', value: 1800000 },
   { label: '1 hour', value: 3600000 },
@@ -19,7 +21,15 @@ const DURATIONS = [
   { label: '5 sec',  value: 5000  },
   { label: '8 sec',  value: 8000  },
   { label: '12 sec', value: 12000 },
+  { label: '15 sec', value: 15000 },
   { label: '20 sec', value: 20000 },
+  { label: '30 sec', value: 30000 },
+]
+
+const WORD_ORDERS = [
+  { label: 'Random',        value: 'random',  desc: 'Words appear in a new shuffled order every cycle' },
+  { label: 'Order',         value: 'order',   desc: 'Words appear in the order you added them' },
+  { label: 'Reverse Order', value: 'reverse', desc: 'Words appear newest-first (last added shows first)' },
 ]
 
 export default function SettingsTab({ toast, onEnabledChange }) {
@@ -140,6 +150,48 @@ export default function SettingsTab({ toast, onEnabledChange }) {
         </p>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           {DURATIONS.map(o => <OptionBtn key={o.value} label={o.label} active={settings.popupDurationMs === o.value} onClick={() => save({ popupDurationMs: o.value })} colors={colors} />)}
+        </div>
+      </Section>
+
+      {/* ── Word Order ── */}
+      <Section title="Word Order" colors={colors}>
+        <p style={{ fontSize: 12.5, color: colors.textMuted, lineHeight: 1.7, marginBottom: 14 }}>
+          Controls the order in which words appear in your popups.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {WORD_ORDERS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => save({ shuffleMode: o.value })}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '11px 14px', borderRadius: radii.md,
+                cursor: 'pointer', textAlign: 'left',
+                background: settings.shuffleMode === o.value ? colors.goldDim : colors.surface2,
+                border: `1px solid ${settings.shuffleMode === o.value ? colors.goldBorder : colors.border}`,
+                transition: 'all 0.15s',
+              }}
+            >
+              {/* Radio dot */}
+              <div style={{
+                width: 16, height: 16, borderRadius: '50%', flexShrink: 0,
+                border: `2px solid ${settings.shuffleMode === o.value ? colors.gold : colors.textMuted}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {settings.shuffleMode === o.value && (
+                  <div style={{ width: 7, height: 7, borderRadius: '50%', background: colors.gold }} />
+                )}
+              </div>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 500, color: settings.shuffleMode === o.value ? colors.gold : colors.textPrimary, margin: 0 }}>
+                  {o.label}
+                </p>
+                <p style={{ fontSize: 11.5, color: colors.textMuted, margin: '2px 0 0', lineHeight: 1.5 }}>
+                  {o.desc}
+                </p>
+              </div>
+            </button>
+          ))}
         </div>
       </Section>
 
